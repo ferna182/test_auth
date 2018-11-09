@@ -2,15 +2,16 @@ const express = require('express')
 const bodyParser = require('body-parser')
 const mongoose = require('mongoose')
 const bcrypt = require('bcrypt')
+const config = require('./config/config').get(process.env.NODE_ENV)
 
 const app = express()
-const port = process.env.PORT || 3000
 
 // DB
 mongoose.Promise = global.Promise
-mongoose.connect('mongodb://localhost:27017/auth')
+mongoose.connect(config.DATABASE)
 
 const { User } = require('./models/user')
+const { auth } = require('./middleware/auth')
 app.use(bodyParser.json())
 
 // POST
@@ -52,7 +53,21 @@ app.post('/api/user/login', (req, res) => {
     })
 })
 
-app.listen(port, () => {
-    console.log(`started on port ${port}`)
+// GET
+
+app.get('/api/user/profile', auth, (req, res) => {
+    res.status(200).send(req.access_token)
+})
+
+app.delete('/api/user/logout', auth, (req, res)=>{
+    req.user.deleteAccessToken(req.access_token, (err,user) => {
+        if (err) return res.status(400).send(err)
+
+        res.status(200).send()
+    })
+})
+
+app.listen(config.PORT, () => {
+    console.log(`started on port ${config.PORT}`)
 })
 
